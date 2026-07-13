@@ -1,0 +1,34 @@
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+
+metadata:
+  name: {{ include "backend.fullname" . }}-spc
+  labels:
+    {{- include "backend.labels" . | nindent 4 }}
+
+spec:
+  provider: azure
+
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "false"
+
+    clientID: {{ .Values.keyVault.clientId | quote }}
+
+    keyvaultName: {{ .Values.keyVault.name | quote }}
+
+    tenantId: {{ .Values.keyVault.tenantId | quote }}
+
+    objects: |
+      array:
+        - |
+          objectName: {{ .Values.keyVault.secrets.dbUsername }}
+          objectType: secret
+
+        - |
+          objectName: {{ .Values.keyVault.secrets.dbPassword }}
+          objectType: secret
+
+        - |
+          objectName: {{ .Values.keyVault.secrets.jwtSecret }}
+          objectType: secret

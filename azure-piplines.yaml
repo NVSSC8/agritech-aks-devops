@@ -1,0 +1,450 @@
+trigger:
+  - main
+
+pool:
+  name: nvssc-selfhost
+
+variables:
+  backendImageName: agritech-backend
+  frontendImageName: agritech-frontend
+
+  imageTag: $(Build.BuildId)
+
+  terraformWorkingDirectory: infra
+
+  resourceGroupName: agritech-rg
+  aksClusterName: agritech-aks
+  kubernetesNamespace: agritech
+
+  backendHelmChart: helm/backend
+  frontendHelmChart: helm/frontend
+
+stages:
+
+# ==========================================================
+# Stage 1 - Infrastructure
+# ==========================================================
+
+- stage: Infrastructure
+  displayName: "Provision Azure Infrastructure"
+
+  jobs:
+
+  - job: Terraform
+    displayName: "Terraform Deployment"
+
+    steps:
+
+    - checkout: self
+
+    - script: |
+        cd $(terraformWorkingDirectory)
+        terraform init
+      displayName: "Terraform Init"
+
+    - script: |
+        cd $(terraformWorkingDirectory)
+        terraform fmt -check
+      displayName: "Terraform Format Check"
+
+    - script: |
+        cd $(terraformWorkingDirectory)
+        terraform validate
+      displayName: "Terraform Validate"
+
+# ==========================================================
+# Stage 2 - Build
+# ==========================================================
+
+- stage: Build
+  displayName: "Build Applications"
+
+  dependsOn: Infrastructure
+
+  jobs:
+
+  - job: BuildBackend
+    displayName: "Build Spring Boot Backend"
+
+    steps:
+
+    - checkout: self
+
+    # Verify Java & Maven installed by Cloud-init
+    - script: |
+        java -version
+        mvn -version
+      displayName: "Verify Java and Maven"
+
+    - task: Maven@4
+      displayName: "Build Backend"
+
+      inputs:
+        mavenPomFile: "backend/pom.xml"
+        goals: "clean package -DskipTests"
+        publishJUnitResults: true
+        testResultsFiles: "**/surefire-reports/TEST-*.xml"
+        javaHomeOption: "JDKVersion"
+        jdkVersionOption: "1.17"
+        mavenVersionOption: "Default"
+
+
+# ==========================================================
+# Stage 3 - Test
+# ==========================================================
+
+- stage: Test
+  displayName: "Run Backend Tests"
+
+  dependsOn: Build
+
+  jobs:
+
+  - job: UnitTests
+    displayName: "Execute Unit Tests"
+
+    steps:
+
+    - checkout: self
+
+    - script: |
+        cd backend
+        mvn test
+      displayName: "Run Maven Tests"
+
+    - task: PublishTestResults@2
+      displayName: "Publish Test Results"
+
+      inputs:
+        testResultsFormat: "JUnit"
+        testResultsFiles: "**/surefire-reports/TEST-*.xml"
+        failTaskOnFailedTests: true
+
+
+
+# ==========================================================
+# Stage 4 - SonarQube Analysis
+# ==========================================================
+
+- stage: SonarQube
+  displayName: "Static Code Analysis"
+
+  dependsOn: Test
+
+  jobs:
+
+  - job: SonarAnalysis
+    displayName: "Analyze Source Code"
+
+    steps:
+
+    - checkout: self
+
+    - task: SonarQubePrepare@7
+      displayName: "Prepare SonarQube Analysis"
+
+      inputs:
+        SonarQube: "SonarQube-ServiceConnection"
+        scannerMode: "Other"
+
+    - task: Maven@4
+      displayName: "Run SonarQube Scan"
+
+      inputs:
+        mavenPomFile: "backend/pom.xml"
+        goals: "sonar:sonar"
+        javaHomeOption: "JDKVersion"
+        jdkVersionOption: "1.17"
+        mavenVersionOption: "Default"
+
+    - task: SonarQubePublish@7
+      displayName: "Publish Quality Gate"
+
+      inputs:
+        pollingTimeoutSec: "300"
+
+
+# ==========================================================
+# Stage 5 - Docker Build
+# ==========================================================
+
+- stage: DockerBuild
+  displayName: "Build Docker Images"
+
+  dependsOn: SonarQube
+
+  jobs:
+
+  - job: Docker
+    displayName: "Build Backend & Frontend Images"
+
+    steps:
+
+    - checkout: self
+
+    - script: |
+        docker version
+      displayName: "Verify Docker Installation"
+
+    # Backend Image
+    - task: Docker@2
+      displayName: "Build Backend Image"
+
+      inputs:
+        command: build
+        Dockerfile: "backend/Dockerfile"
+        buildContext: "backend"
+        repository: "$(backendImageName)"
+        tags: |
+          $(imageTag)
+
+    # Frontend Image
+    - task: Docker@2
+      displayName: "Build Frontend Image"
+
+      inputs:
+        command: build
+        Dockerfile: "frontend/Dockerfile"
+        buildContext: "frontend"
+        repository: "$(frontendImageName)"
+        tags: |
+          $(imageTag)
+
+# ==========================================================
+# Stage 6 - Trivy Security Scan
+# ==========================================================
+
+- stage: Trivy
+  displayName: "Container Security Scan"
+
+  dependsOn: DockerBuild
+
+  jobs:
+
+  - job: TrivyScan
+    displayName: "Scan Docker Images"
+
+    steps:
+
+    - checkout: self
+
+    - script: |
+        trivy --version
+      displayName: "Verify Trivy Installation"
+
+    - script: |
+        trivy image $(backendImageName):$(imageTag)
+      displayName: "Scan Backend Image"
+
+    - script: |
+        trivy image $(frontendImageName):$(imageTag)
+      displayName: "Scan Frontend Image"
+
+
+
+# ==========================================================
+# Stage 7 - Push Images to Azure Container Registry
+# ==========================================================
+
+- stage: PushACR
+  displayName: "Push Docker Images to Azure Container Registry"
+
+  dependsOn: Trivy
+
+  jobs:
+
+  - job: PushImages
+    displayName: "Push Backend and Frontend Images"
+
+    steps:
+
+    - checkout: self
+
+    - task: Docker@2
+      displayName: "Push Backend Image"
+
+      inputs:
+        command: push
+        repository: "$(backendImageName)"
+        containerRegistry: "ACR-ServiceConnection"
+        tags: |
+          $(imageTag)
+
+    - task: Docker@2
+      displayName: "Push Frontend Image"
+
+      inputs:
+        command: push
+        repository: "$(frontendImageName)"
+        containerRegistry: "ACR-ServiceConnection"
+        tags: |
+          $(imageTag)
+
+# ==========================================================
+# Stage 8 - Deploy to AKS
+# ==========================================================
+
+- stage: Deploy
+  displayName: "Deploy Application to AKS"
+
+  dependsOn: PushACR
+
+  jobs:
+
+  - deployment: DeployToAKS
+    displayName: "Deploy Backend and Frontend"
+
+    environment: "Development"
+
+    strategy:
+
+      runOnce:
+
+        deploy:
+
+          steps:
+
+          - checkout: self
+
+          #################################################
+          # Login to Azure
+          #################################################
+
+          - task: AzureCLI@2
+            displayName: "Login to Azure"
+
+            inputs:
+              azureSubscription: "Azure-ServiceConnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az account show
+
+          #################################################
+          # Get AKS Credentials
+          #################################################
+
+          - task: AzureCLI@2
+            displayName: "Get AKS Credentials"
+
+            inputs:
+              azureSubscription: "Azure-ServiceConnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(resourceGroupName) \
+                  --name $(aksClusterName) \
+                  --overwrite-existing
+
+          #################################################
+          # Install Secrets Store CSI Driver
+          #################################################
+
+          - script: |
+              helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+
+              helm repo update
+
+              helm upgrade --install csi-driver \
+                secrets-store-csi-driver/secrets-store-csi-driver \
+                --namespace kube-system
+
+            displayName: "Install CSI Driver"
+
+          #################################################
+          # Install Azure Provider
+          #################################################
+
+          - script: |
+              helm repo add csi-secrets-store-provider-azure \
+                https://azure.github.io/secrets-store-csi-driver-provider-azure/charts
+
+              helm repo update
+
+              helm upgrade --install azure-provider \
+                csi-secrets-store-provider-azure/csi-secrets-store-provider-azure \
+                --namespace kube-system
+
+            displayName: "Install Azure Provider"
+
+          #################################################
+          # Deploy Backend
+          #################################################
+
+          - script: |
+              helm upgrade --install backend \
+                $(backendHelmChart) \
+                --namespace $(kubernetesNamespace) \
+                --create-namespace
+
+            displayName: "Deploy Backend"
+
+          #################################################
+          # Deploy Frontend
+          #################################################
+
+          - script: |
+              helm upgrade --install frontend \
+                $(frontendHelmChart)
+                --namespace $(kubernetesNamespace)
+
+            displayName: "Deploy Frontend"
+
+
+# ==========================================================
+# Stage 9 - Verification
+# ==========================================================
+
+- stage: Verify
+  displayName: "Verify AKS Deployment"
+
+  dependsOn: Deploy
+
+  jobs:
+
+  - job: VerifyDeployment
+    displayName: "Verify Kubernetes Resources"
+
+    steps:
+
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: "Get AKS Credentials"
+
+      inputs:
+        azureSubscription: "Azure-ServiceConnection"
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az aks get-credentials \
+            --resource-group $(resourceGroupName) \
+            --name $(aksClusterName) \
+            --overwrite-existing
+
+    - script: |
+        kubectl get nodes
+      displayName: "Verify Nodes"
+
+    - script: |
+        kubectl get pods -n $(kubernetesNamespace)
+      displayName: "Verify Pods"
+
+    - script: |
+        kubectl get svc -n $(kubernetesNamespace)
+      displayName: "Verify Services"
+
+    - script: |
+        kubectl get ingress -n $(kubernetesNamespace)
+      displayName: "Verify Ingress"
+
+    - script: |
+        kubectl rollout status deployment/backend -n $(kubernetesNamespace)
+      displayName: "Verify Backend Rollout"
+
+    - script: |
+        kubectl rollout status deployment/frontend -n $(kubernetesNamespace)
+      displayName: "Verify Frontend Rollout"
+
+

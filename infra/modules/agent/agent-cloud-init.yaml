@@ -1,0 +1,65 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - wget
+  - unzip
+  - git
+  - apt-transport-https
+  - ca-certificates
+  - software-properties-common
+  - gnupg
+  - lsb-release
+
+runcmd:
+
+  ####################################################################
+  # Java 17
+  ####################################################################
+  - apt-get update
+  - apt-get install -y openjdk-17-jdk
+
+  ####################################################################
+  # Maven
+  ####################################################################
+  - apt-get install -y maven
+
+  ####################################################################
+  # Docker
+  ####################################################################
+  - curl -fsSL https://get.docker.com | sh
+  - systemctl enable docker
+  - systemctl start docker
+
+  ####################################################################
+  # Terraform
+  ####################################################################
+  - wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  - echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
+  - apt-get update
+  - apt-get install -y terraform
+
+  ####################################################################
+  # Azure CLI
+  ####################################################################
+  - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+  ####################################################################
+  # kubectl
+  ####################################################################
+  - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+  - install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+  ####################################################################
+  # Helm
+  ####################################################################
+  - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+  ####################################################################
+  # Trivy
+  ####################################################################
+  - wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.64.1_Linux-64bit.deb
+  - dpkg -i trivy_0.64.1_Linux-64bit.deb

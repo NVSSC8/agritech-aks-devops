@@ -1,0 +1,164 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - AgriTech Marketplace</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet"
+  />
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+  />
+
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+
+<body class="auth-body" data-page="login">
+
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark">
+        <i class="fa-solid fa-seedling"></i>
+      </span>
+      <span>
+        <strong>AgriTech Marketplace</strong>
+        <small>Farmer login</small>
+      </span>
+    </a>
+
+    <nav class="nav">
+      <a href="/">
+        <i class="fa-solid fa-house"></i> Home
+      </a>
+
+      <a href="login.html" class="active">
+        <i class="fa-solid fa-right-to-bracket"></i> Login
+      </a>
+
+      <a href="register.html">
+        <i class="fa-solid fa-user-plus"></i> Register
+      </a>
+    </nav>
+  </header>
+
+  <main class="auth-shell container">
+
+    <section class="auth-panel">
+      <span class="pill">
+        <i class="fa-solid fa-lock"></i>
+        Secure Login
+      </span>
+
+      <h1>Welcome back, farmer.</h1>
+
+      <p>
+        Continue managing crop preferences, cart items and recommendations.
+      </p>
+
+      <div class="auth-benefits">
+        <span><i class="fa-solid fa-circle-check"></i> Save product preferences</span>
+        <span><i class="fa-solid fa-circle-check"></i> Track cart items</span>
+        <span><i class="fa-solid fa-circle-check"></i> Continue crop recommendations</span>
+      </div>
+    </section>
+
+    <form class="form-card" id="loginForm">
+
+      <h1>Login</h1>
+      <p>Enter your email and password to continue.</p>
+
+      <div class="form-grid">
+
+        <label>Email address</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-envelope"></i>
+          <input
+            type="email"
+            id="email"
+            placeholder="farmer@example.com"
+            required
+          />
+        </div>
+
+        <label>Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input
+            type="password"
+            id="password"
+            placeholder="Your password"
+            required
+          />
+        </div>
+
+      </div>
+
+      <div class="hero-actions">
+
+        <button class="form-btn primary" type="submit">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          Sign In
+        </button>
+
+        <a class="form-btn secondary" href="/">
+          <i class="fa-solid fa-arrow-left"></i>
+          Back Home
+        </a>
+
+      </div>
+
+    </form>
+
+  </main>
+
+<script>
+
+document.getElementById("loginForm").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    try {
+
+        const response = await fetch(
+            "/api/login",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: email,
+                    password: password
+                })
+            }
+        );
+
+        const result = await response.text();
+
+        alert(result);
+
+    } catch(error) {
+
+        console.error(error);
+        alert("Failed to connect to backend");
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
+```

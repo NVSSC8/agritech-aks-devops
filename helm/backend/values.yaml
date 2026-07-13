@@ -1,0 +1,114 @@
+# -------------------------------
+# Replica Configuration
+# -------------------------------
+
+replicaCount: 2
+
+# -------------------------------
+# Docker Image
+# -------------------------------
+
+image:
+  repository: agritechbackend
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: acr-secret
+
+# -------------------------------
+# Application Configuration
+# -------------------------------
+
+nameOverride: ""
+fullnameOverride: ""
+
+containerPort: 8080
+
+# -------------------------------
+# Kubernetes Service
+# -------------------------------
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# -------------------------------
+# Ingress
+# -------------------------------
+
+ingress:
+  enabled: true
+  className: nginx
+
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+
+  hosts:
+    - host: api.agritech.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# -------------------------------
+# Resources
+# -------------------------------
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# -------------------------------
+# Horizontal Pod Autoscaler
+# -------------------------------
+
+autoscaling:
+  enabled: true
+
+  minReplicas: 2
+  maxReplicas: 5
+
+  targetCPUUtilizationPercentage: 70
+
+# -------------------------------
+# Azure Key Vault Secrets
+# -------------------------------
+
+secretProviderClass: agritech-backend-spc
+
+# -------------------------------
+# ConfigMap Values
+# -------------------------------
+
+config:
+
+  SPRING_PROFILES_ACTIVE: prod
+
+  DB_HOST: mysql
+
+  DB_PORT: "3306"
+
+  DB_NAME: agritechdb
+
+
+  keyVault:
+
+  clientId: ""
+
+  tenantId: ""
+
+  name: ""
+
+  secrets:
+
+    dbUsername: "db-username"
+
+    dbPassword: "db-password"
+
+    jwtSecret: "jwt-secret"
