@@ -249,12 +249,12 @@ stages:
 
     - checkout: self
 
-    - task: SonarQubePrepare@3
+    - task: SonarCloudPrepare@4
       displayName: "Prepare SonarQube Cloud"
 
       inputs:
-        SonarQube: "SonarQubeCloud-ServiceConnection"
-        Organization: "nvssc8"
+        SonarCloud: "SonarQubeCloud-ServiceConnection"
+        organization: "nvssc8"
         scannerMode: "Other"
 
     - task: Maven@4
@@ -267,7 +267,7 @@ stages:
         jdkVersionOption: "1.17"
         mavenVersionOption: Default
 
-    - task: SonarQubePublish@3
+    - task: SonarCloudPublish@4
       displayName: "Publish Quality Gate"
 
       inputs:
