@@ -63,3 +63,43 @@ runcmd:
   ####################################################################
   - wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.64.1_Linux-64bit.deb
   - dpkg -i trivy_0.64.1_Linux-64bit.deb
+
+
+
+  ####################################################################
+  # Azure DevOps Self-Hosted Agent
+  ####################################################################
+
+  ####################################################################
+  # Create Azure DevOps Agent User
+  ####################################################################
+  - useradd -m -s /bin/bash azagent || true
+  - mkdir -p /home/azagent/agent
+  - chown -R azagent:azagent /home/azagent
+
+  ####################################################################
+  # Download Azure DevOps Agent
+  ####################################################################
+  - cd /home/azagent/agent
+  - sudo -u azagent wget https://vstsagentpackage.azureedge.net/agent/4.261.0/vsts-agent-linux-x64-4.261.0.tar.gz
+  - sudo -u azagent tar zxvf vsts-agent-linux-x64-4.261.0.tar.gz
+
+  ####################################################################
+  # Configure Azure DevOps Agent
+  ####################################################################
+ - |
+    cd /home/azagent/agent
+
+    sudo -u azagent ./config.sh \
+      --unattended \
+      --url "${azure_devops_url}" \
+      --auth pat \
+      --token "${pat_token}" \
+      --pool "${agent_pool}" \
+      --agent "${agent_name}" \
+      --acceptTeeEula \
+      --replace \
+      --work _work
+
+    ./svc.sh install azagent
+    ./svc.sh start
