@@ -109,6 +109,6 @@ module "aks" {
   node_count = var.node_count
   vm_size    = var.vm_size
 
-  subnet_id   = module.vnet.vm_subnet_id
+  subnet_id    = module.vnet.vm_subnet_id
   workspace_id = module.log_analytics.workspace_id
 }

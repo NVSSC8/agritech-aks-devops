@@ -19,7 +19,6 @@ spec:
         {{- include "backend.selectorLabels" . | nindent 8 }}
 
     spec:
-
       containers:
         - name: backend
 

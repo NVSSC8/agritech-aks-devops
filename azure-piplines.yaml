@@ -1,23 +1,32 @@
 trigger:
-  - main
+  - master
 
 pool:
   name: nvssc-selfhost
 
 variables:
-  backendImageName: agritech-backend
-  frontendImageName: agritech-frontend
+- group: Agritech-Dev-Variables
 
-  imageTag: $(Build.BuildId)
+- name: backendImageName
+  value: agritech-backend
 
-  terraformWorkingDirectory: infra
+- name: frontendImageName
+  value: agritech-frontend
 
-  resourceGroupName: agritech-rg
-  aksClusterName: agritech-aks
-  kubernetesNamespace: agritech
+- name: imageTag
+  value: $(Build.BuildId)
 
-  backendHelmChart: helm/backend
-  frontendHelmChart: helm/frontend
+- name: terraformWorkingDirectory
+  value: infra
+
+- name: kubernetesNamespace
+  value: agritech
+
+- name: backendHelmChart
+  value: helm/backend
+
+- name: frontendHelmChart
+  value: helm/frontend
 
 stages:
 
@@ -37,20 +46,77 @@ stages:
 
     - checkout: self
 
-    - script: |
-        cd $(terraformWorkingDirectory)
-        terraform init
+    # Terraform Init
+    - task: AzureCLI@2
       displayName: "Terraform Init"
 
+      inputs:
+        azureSubscription: "Azure-ServiceConnection"
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          cd $(terraformWorkingDirectory)
+          terraform init
+
+      env:
+        TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
+        TF_VAR_tenant_id: $(TENANT_ID)
+        TF_VAR_client_id: $(CLIENT_ID)
+        TF_VAR_client_secret: $(CLIENT_SECRET)
+        TF_VAR_pat_token: $(PAT_TOKEN)
+        TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
+
+    # Terraform Format Check
     - script: |
         cd $(terraformWorkingDirectory)
         terraform fmt -check
       displayName: "Terraform Format Check"
 
+    # Terraform Validate
     - script: |
         cd $(terraformWorkingDirectory)
         terraform validate
       displayName: "Terraform Validate"
+
+    # Terraform Plan
+    - task: AzureCLI@2
+      displayName: "Terraform Plan"
+
+      inputs:
+        azureSubscription: "Azure-ServiceConnection"
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          cd $(terraformWorkingDirectory)
+          terraform plan -out=tfplan
+
+      env:
+        TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
+        TF_VAR_tenant_id: $(TENANT_ID)
+        TF_VAR_client_id: $(CLIENT_ID)
+        TF_VAR_client_secret: $(CLIENT_SECRET)
+        TF_VAR_pat_token: $(PAT_TOKEN)
+        TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
+
+    # Terraform Apply
+    - task: AzureCLI@2
+      displayName: "Terraform Apply"
+
+      inputs:
+        azureSubscription: "Azure-ServiceConnection"
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          cd $(terraformWorkingDirectory)
+          terraform apply -auto-approve tfplan
+
+      env:
+        TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
+        TF_VAR_tenant_id: $(TENANT_ID)
+        TF_VAR_client_id: $(CLIENT_ID)
+        TF_VAR_client_secret: $(CLIENT_SECRET)
+        TF_VAR_pat_token: $(PAT_TOKEN)
+        TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
 
 # ==========================================================
 # Stage 2 - Build
@@ -260,25 +326,33 @@ stages:
 
     - checkout: self
 
-    - task: Docker@2
+    - task: AzureCLI@2
+      displayName: "Login to Azure and ACR"
+
+      inputs:
+        azureSubscription: "Azure-ServiceConnection"
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az acr login --name $(ACR_NAME)
+
+    - script: |
+        docker tag $(backendImageName):$(imageTag) \
+        $(ACR_NAME).azurecr.io/$(backendImageName):$(imageTag)
+
+        docker push \
+        $(ACR_NAME).azurecr.io/$(backendImageName):$(imageTag)
+
       displayName: "Push Backend Image"
 
-      inputs:
-        command: push
-        repository: "$(backendImageName)"
-        containerRegistry: "ACR-ServiceConnection"
-        tags: |
-          $(imageTag)
+    - script: |
+        docker tag $(frontendImageName):$(imageTag) \
+        $(ACR_NAME).azurecr.io/$(frontendImageName):$(imageTag)
 
-    - task: Docker@2
+        docker push \
+        $(ACR_NAME).azurecr.io/$(frontendImageName):$(imageTag)
+
       displayName: "Push Frontend Image"
-
-      inputs:
-        command: push
-        repository: "$(frontendImageName)"
-        containerRegistry: "ACR-ServiceConnection"
-        tags: |
-          $(imageTag)
 
 # ==========================================================
 # Stage 8 - Deploy to AKS
@@ -373,23 +447,27 @@ stages:
           #################################################
 
           - script: |
-              helm upgrade --install backend \
-                $(backendHelmChart) \
-                --namespace $(kubernetesNamespace) \
-                --create-namespace
+             helm upgrade --install backend \
+             $(backendHelmChart) \
+             --namespace $(kubernetesNamespace) \
+             --create-namespace \
+             --set image.repository=$(ACR_NAME).azurecr.io/$(backendImageName) \
+             --set image.tag=$(imageTag)
 
-            displayName: "Deploy Backend"
+  displayName: "Deploy Backend"
 
           #################################################
           # Deploy Frontend
           #################################################
 
-          - script: |
-              helm upgrade --install frontend \
-                $(frontendHelmChart)
-                --namespace $(kubernetesNamespace)
+         - script: |
+            helm upgrade --install frontend \
+             $(frontendHelmChart) \
+             --namespace $(kubernetesNamespace) \
+             --set image.repository=$(ACR_NAME).azurecr.io/$(frontendImageName) \
+             --set image.tag=$(imageTag)
 
-            displayName: "Deploy Frontend"
+  displayName: "Deploy Frontend"
 
 
 # ==========================================================

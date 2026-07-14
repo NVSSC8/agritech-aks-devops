@@ -9,12 +9,11 @@ replicaCount: 2
 # -------------------------------
 
 image:
-  repository: agritechbackend
-  tag: "1.0.0"
-  pullPolicy: IfNotPresent
+   repository: ""
+   tag: ""
+   pullPolicy: IfNotPresent
 
-imagePullSecrets:
-  - name: acr-secret
+imagePullSecrets: []
 
 # -------------------------------
 # Application Configuration
