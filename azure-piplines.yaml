@@ -262,7 +262,7 @@ stages:
 
       inputs:
         mavenPomFile: backend/pom.xml
-        goals: clean Verify sonar:sonar
+        goals: clean verify sonar:sonar
         javaHomeOption: JDKVersion
         jdkVersionOption: "1.17"
         mavenVersionOption: Default
