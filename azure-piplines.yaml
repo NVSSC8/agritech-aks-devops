@@ -253,7 +253,7 @@ stages:
       displayName: "Prepare SonarQube Analysis"
 
       inputs:
-        SonarQube: "SonarQube-ServiceConnection"
+        SonarQube: "SonarQubeCloud-ServiceConnection"
         scannerMode: "Other"
 
     - task: Maven@4
@@ -386,7 +386,7 @@ stages:
         docker push \
         $(ACR_NAME).azurecr.io/$(backendImageName):$(imageTag)
 
-      displayName: "Push Backend Image"
+       displayName: "Push Backend Image"
 
     - script: |
         docker tag $(frontendImageName):$(imageTag) \
@@ -395,7 +395,7 @@ stages:
         docker push \
         $(ACR_NAME).azurecr.io/$(frontendImageName):$(imageTag)
 
-      displayName: "Push Frontend Image"
+       displayName: "Push Frontend Image"
 
 # ==========================================================
 # Stage 8 - Deploy to AKS
