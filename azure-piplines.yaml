@@ -237,7 +237,7 @@ stages:
     dependsOn: Build
 
     pool:
-    name: nvssc-selfhost
+      name: nvssc-selfhost
 
     jobs:
 
@@ -273,7 +273,7 @@ stages:
     dependsOn: Test
 
     pool:
-    name: nvssc-selfhost
+      name: nvssc-selfhost
 
     jobs:
 
@@ -319,7 +319,7 @@ stages:
     dependsOn: SonarQube
 
     pool:
-    name: nvssc-selfhost
+      name: nvssc-selfhost
 
     jobs:
 
@@ -368,7 +368,7 @@ stages:
     dependsOn: DockerBuild
 
     pool:
-    name: nvssc-selfhost
+      name: nvssc-selfhost
 
     jobs:
 
@@ -403,7 +403,7 @@ stages:
     dependsOn: Trivy
 
     pool:
-    name: nvssc-selfhost
+      name: nvssc-selfhost
 
     jobs:
 
@@ -452,7 +452,7 @@ stages:
     dependsOn: PushACR
 
     pool:
-    name: nvssc-selfhost
+      name: nvssc-selfhost
 
     jobs:
 
@@ -567,7 +567,7 @@ stages:
     dependsOn: Deploy
 
     pool:
-    name: nvssc-selfhost
+      name: nvssc-selfhost
 
     jobs:
 
@@ -614,5 +614,4 @@ stages:
       - script: |
           kubectl rollout status deployment/frontend -n $(kubernetesNamespace)
         displayName: "Verify Frontend Rollout"
-
 
