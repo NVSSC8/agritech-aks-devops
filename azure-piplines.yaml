@@ -386,7 +386,7 @@ stages:
         docker push \
         $(ACR_NAME).azurecr.io/$(backendImageName):$(imageTag)
 
-       displayName: "Push Backend Image"
+      displayName: "Push Backend Image"
 
     - script: |
         docker tag $(frontendImageName):$(imageTag) \
@@ -395,7 +395,7 @@ stages:
         docker push \
         $(ACR_NAME).azurecr.io/$(frontendImageName):$(imageTag)
 
-       displayName: "Push Frontend Image"
+      displayName: "Push Frontend Image"
 
 # ==========================================================
 # Stage 8 - Deploy to AKS
@@ -491,13 +491,13 @@ stages:
 
           - script: |
              helm upgrade --install backend \
-             $(backendHelmChart) \
-             --namespace $(kubernetesNamespace) \
-             --create-namespace \
-             --set image.repository=$(ACR_NAME).azurecr.io/$(backendImageName) \
-             --set image.tag=$(imageTag)
+                 $(backendHelmChart) \
+                 --namespace $(kubernetesNamespace) \
+                 --create-namespace \
+                 --set image.repository=$(ACR_NAME).azurecr.io/$(backendImageName) \
+                 --set image.tag=$(imageTag)
 
-  displayName: "Deploy Backend"
+            displayName: "Deploy Backend"
 
           #################################################
           # Deploy Frontend
@@ -505,12 +505,11 @@ stages:
 
           - script: |
              helm upgrade --install frontend \
-             $(frontendHelmChart) \
-             --namespace $(kubernetesNamespace) \
-             --set image.repository=$(ACR_NAME).azurecr.io/$(frontendImageName) \
-             --set image.tag=$(imageTag)
-
-  displayName: "Deploy Frontend"
+                $(frontendHelmChart) \
+                --namespace $(kubernetesNamespace) \
+                --set image.repository=$(ACR_NAME).azurecr.io/$(frontendImageName) \
+                --set image.tag=$(imageTag)
+          displayName: "Deploy Frontend"  
 
 
 # ==========================================================
