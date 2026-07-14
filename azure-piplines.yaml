@@ -485,18 +485,17 @@ stages:
 
             displayName: "Install Azure Provider"
 
-          #################################################
+                    #################################################
           # Deploy Backend
           #################################################
 
           - script: |
-             helm upgrade --install backend \
-                 $(backendHelmChart) \
-                 --namespace $(kubernetesNamespace) \
-                 --create-namespace \
-                 --set image.repository=$(ACR_NAME).azurecr.io/$(backendImageName) \
-                 --set image.tag=$(imageTag)
-
+              helm upgrade --install backend \
+                $(backendHelmChart) \
+                --namespace $(kubernetesNamespace) \
+                --create-namespace \
+                --set image.repository=$(ACR_NAME).azurecr.io/$(backendImageName) \
+                --set image.tag=$(imageTag)
             displayName: "Deploy Backend"
 
           #################################################
@@ -504,14 +503,12 @@ stages:
           #################################################
 
           - script: |
-             helm upgrade --install frontend \
+              helm upgrade --install frontend \
                 $(frontendHelmChart) \
                 --namespace $(kubernetesNamespace) \
                 --set image.repository=$(ACR_NAME).azurecr.io/$(frontendImageName) \
                 --set image.tag=$(imageTag)
-          displayName: "Deploy Frontend"  
-
-
+            displayName: "Deploy Frontend"
 # ==========================================================
 # Stage 9 - Verification
 # ==========================================================
