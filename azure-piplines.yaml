@@ -249,24 +249,25 @@ stages:
 
     - checkout: self
 
-    - task: SonarQubePrepare@7
-      displayName: "Prepare SonarQube Analysis"
+    - task: SonarQubePrepare@3
+      displayName: "Prepare SonarQube Cloud"
 
       inputs:
         SonarQube: "SonarQubeCloud-ServiceConnection"
+        Organization: "nvssc8"
         scannerMode: "Other"
 
     - task: Maven@4
-      displayName: "Run SonarQube Scan"
+      displayName: "Run Sonar Scan"
 
       inputs:
-        mavenPomFile: "backend/pom.xml"
-        goals: "sonar:sonar"
-        javaHomeOption: "JDKVersion"
+        mavenPomFile: backend/pom.xml
+        goals: clean Verify sonar:sonar
+        javaHomeOption: JDKVersion
         jdkVersionOption: "1.17"
-        mavenVersionOption: "Default"
+        mavenVersionOption: Default
 
-    - task: SonarQubePublish@7
+    - task: SonarQubePublish@3
       displayName: "Publish Quality Gate"
 
       inputs:
