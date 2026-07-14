@@ -1,0 +1,484 @@
+trigger:
+  - master
+  
+variables:
+  - group: Agritech-Dev-Variables
+
+  - name: backendImageName
+    value: agritech-backend
+
+  - name: frontendImageName
+    value: agritech-frontend
+
+  - name: imageTag
+    value: $(Build.BuildId)
+
+  - name: terraformWorkingDirectory
+    value: infra
+
+  - name: kubernetesNamespace
+    value: agritech
+
+  - name: backendHelmChart
+    value: helm/backend
+
+  - name: frontendHelmChart
+    value: helm/frontend
+
+stages:
+
+  # ==========================================================
+  # Stage 1 - Infrastructure
+  # ==========================================================
+
+  - stage: Infrastructure
+    displayName: "Provision Azure Infrastructure"
+
+    pool:
+      vmImage: ubuntu-latest
+
+    jobs:
+
+      - job: Terraform
+        displayName: "Terraform Deployment"
+
+        steps:
+
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: "latest"
+
+          # Terraform Init
+          - task: AzureCLI@2
+            displayName: "Terraform Init"
+            inputs:
+              azureSubscription: "Azure-ServiceConnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                cd $(terraformWorkingDirectory)
+                terraform init
+            env:
+              TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
+              TF_VAR_tenant_id: $(TENANT_ID)
+              TF_VAR_client_id: $(CLIENT_ID)
+              TF_VAR_client_secret: $(CLIENT_SECRET)
+              TF_VAR_ssh_public_key: $(SSH_PUBLIC_KEY)
+              TF_VAR_aks_name: $(AKS_NAME)
+              TF_VAR_node_count: $(NODE_COUNT)
+              TF_VAR_acr_name: $(ACR_NAME)
+              TF_VAR_mysql_admin_username: $(MYSQL_ADMIN_USERNAME)
+              TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
+              TF_VAR_key_vault_name: $(KEY_VAULT_NAME)
+              TF_VAR_azure_devops_url: $(AZURE_DEVOPS_URL)
+              TF_VAR_agent_pool: $(AGENT_POOL)
+              TF_VAR_pat_token: $(PAT_TOKEN)
+
+          # Terraform Format Check
+          - script: |
+              cd $(terraformWorkingDirectory)
+              terraform fmt -check
+            displayName: "Terraform Format Check"
+
+          # Terraform Validate
+          - script: |
+              cd $(terraformWorkingDirectory)
+              terraform validate
+            displayName: "Terraform Validate"
+
+          # Terraform Plan
+          - task: AzureCLI@2
+            displayName: "Terraform Plan"
+            inputs:
+              azureSubscription: "Azure-ServiceConnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                cd $(terraformWorkingDirectory)
+                terraform plan -out=tfplan
+            env:
+              TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
+              TF_VAR_tenant_id: $(TENANT_ID)
+              TF_VAR_client_id: $(CLIENT_ID)
+              TF_VAR_client_secret: $(CLIENT_SECRET)
+              TF_VAR_ssh_public_key: $(SSH_PUBLIC_KEY)
+              TF_VAR_aks_name: $(AKS_NAME)
+              TF_VAR_node_count: $(NODE_COUNT)
+              TF_VAR_acr_name: $(ACR_NAME)
+              TF_VAR_mysql_admin_username: $(MYSQL_ADMIN_USERNAME)
+              TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
+              TF_VAR_key_vault_name: $(KEY_VAULT_NAME)
+              TF_VAR_azure_devops_url: $(AZURE_DEVOPS_URL)
+              TF_VAR_agent_pool: $(AGENT_POOL)
+              TF_VAR_pat_token: $(PAT_TOKEN)
+
+          # Terraform Apply
+          - task: AzureCLI@2
+            displayName: "Terraform Apply"
+            inputs:
+              azureSubscription: "Azure-ServiceConnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                cd $(terraformWorkingDirectory)
+                terraform apply -auto-approve tfplan
+            env:
+              TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
+              TF_VAR_tenant_id: $(TENANT_ID)
+              TF_VAR_client_id: $(CLIENT_ID)
+              TF_VAR_client_secret: $(CLIENT_SECRET)
+              TF_VAR_ssh_public_key: $(SSH_PUBLIC_KEY)
+              TF_VAR_aks_name: $(AKS_NAME)
+              TF_VAR_node_count: $(NODE_COUNT)
+              TF_VAR_acr_name: $(ACR_NAME)
+              TF_VAR_mysql_admin_username: $(MYSQL_ADMIN_USERNAME)
+              TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
+              TF_VAR_key_vault_name: $(KEY_VAULT_NAME)
+              TF_VAR_azure_devops_url: $(AZURE_DEVOPS_URL)
+              TF_VAR_agent_pool: $(AGENT_POOL)
+              TF_VAR_pat_token: $(PAT_TOKEN)
+
+  # ==========================================================
+  # Stage 2 - Build
+  # ==========================================================
+
+  - stage: Build
+    displayName: "Build Applications"
+    dependsOn: Infrastructure
+    pool:
+      name: nvssc-selfhost
+
+    jobs:
+      - job: BuildBackend
+        displayName: "Build Spring Boot Backend"
+        steps:
+          - checkout: self
+
+          # Verify Java & Maven installed by Cloud-init
+          - script: |
+              java -version
+              mvn -version
+            displayName: "Verify Java and Maven"
+
+          - task: Maven@4
+            displayName: "Build Backend"
+            inputs:
+              mavenPomFile: "backend/pom.xml"
+              goals: "clean package -DskipTests"
+              publishJUnitResults: true
+              testResultsFiles: "**/surefire-reports/TEST-*.xml"
+              javaHomeOption: "JDKVersion"
+              jdkVersionOption: "1.17"
+              mavenVersionOption: "Default"
+
+  # ==========================================================
+  # Stage 3 - Test
+  # ==========================================================
+
+  - stage: Test
+    displayName: "Run Backend Tests"
+    dependsOn: Build
+    pool:
+      name: nvssc-selfhost
+
+    jobs:
+      - job: UnitTests
+        displayName: "Execute Unit Tests"
+        steps:
+          - checkout: self
+
+          - script: |
+              cd backend
+              mvn test
+            displayName: "Run Maven Tests"
+
+          - task: PublishTestResults@2
+            displayName: "Publish Test Results"
+            inputs:
+              testResultsFormat: "JUnit"
+              testResultsFiles: "**/surefire-reports/TEST-*.xml"
+              failTaskOnFailedTests: true
+
+  # ==========================================================
+  # Stage 4 - SonarQube Analysis
+  # ==========================================================
+
+  - stage: SonarQube
+    displayName: "Static Code Analysis"
+    dependsOn: Test
+    pool:
+      name: nvssc-selfhost
+
+    jobs:
+      - job: SonarAnalysis
+        displayName: "Analyze Source Code"
+        steps:
+          - checkout: self
+
+          - task: SonarCloudPrepare@4
+            displayName: "Prepare SonarQube Cloud"
+            inputs:
+              SonarCloud: "SonarQubeCloud-ServiceConnection"
+              organization: "nvssc8"
+              scannerMode: "Other"
+
+          - task: Maven@4
+            displayName: "Run Sonar Scan"
+            inputs:
+              mavenPomFile: backend/pom.xml
+              goals: clean verify sonar:sonar
+              javaHomeOption: JDKVersion
+              jdkVersionOption: "1.17"
+              mavenVersionOption: Default
+
+          - task: SonarCloudPublish@4
+            displayName: "Publish Quality Gate"
+            inputs:
+              pollingTimeoutSec: "300"
+
+  # ==========================================================
+  # Stage 5 - Docker Build
+  # ==========================================================
+
+  - stage: DockerBuild
+    displayName: "Build Docker Images"
+    dependsOn: SonarQube
+    pool:
+      name: nvssc-selfhost
+
+    jobs:
+      - job: Docker
+        displayName: "Build Backend & Frontend Images"
+        steps:
+          - checkout: self
+
+          - script: |
+              docker version
+            displayName: "Verify Docker Installation"
+
+          # Backend Image
+          - task: Docker@2
+            displayName: "Build Backend Image"
+            inputs:
+              command: build
+              Dockerfile: "backend/Dockerfile"
+              buildContext: "backend"
+              repository: "$(backendImageName)"
+              tags: |
+                $(imageTag)
+
+          # Frontend Image
+          - task: Docker@2
+            displayName: "Build Frontend Image"
+            inputs:
+              command: build
+              Dockerfile: "frontend/Dockerfile"
+              buildContext: "frontend"
+              repository: "$(frontendImageName)"
+              tags: |
+                $(imageTag)
+
+  # ==========================================================
+  # Stage 6 - Trivy Security Scan
+  # ==========================================================
+
+  - stage: Trivy
+    displayName: "Container Security Scan"
+    dependsOn: DockerBuild
+    pool:
+      name: nvssc-selfhost
+
+    jobs:
+      - job: TrivyScan
+        displayName: "Scan Docker Images"
+        steps:
+          - checkout: self
+
+          - script: |
+              trivy --version
+            displayName: "Verify Trivy Installation"
+
+          - script: |
+              trivy image $(backendImageName):$(imageTag)
+            displayName: "Scan Backend Image"
+
+          - script: |
+              trivy image $(frontendImageName):$(imageTag)
+            displayName: "Scan Frontend Image"
+
+  # ==========================================================
+  # Stage 7 - Push Images to Azure Container Registry
+  # ==========================================================
+
+  - stage: PushACR
+    displayName: "Push Docker Images to Azure Container Registry"
+    dependsOn: Trivy
+    pool:
+      name: nvssc-selfhost
+
+    jobs:
+      - job: PushImages
+        displayName: "Push Backend and Frontend Images"
+        steps:
+          - checkout: self
+
+          - task: AzureCLI@2
+            displayName: "Login to Azure and ACR"
+            inputs:
+              azureSubscription: "Azure-ServiceConnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az acr login --name $(ACR_NAME)
+
+          - script: |
+              docker tag $(backendImageName):$(imageTag) \
+              $(ACR_NAME).azurecr.io/$(backendImageName):$(imageTag)
+
+              docker push \
+              $(ACR_NAME).azurecr.io/$(backendImageName):$(imageTag)
+            displayName: "Push Backend Image"
+
+          - script: |
+              docker tag $(frontendImageName):$(imageTag) \
+              $(ACR_NAME).azurecr.io/$(frontendImageName):$(imageTag)
+
+              docker push \
+              $(ACR_NAME).azurecr.io/$(frontendImageName):$(imageTag)
+            displayName: "Push Frontend Image"
+
+  # ==========================================================
+  # Stage 8 - Deploy to AKS
+  # ==========================================================
+
+  - stage: Deploy
+    displayName: "Deploy Application to AKS"
+    dependsOn: PushACR
+    pool:
+      name: nvssc-selfhost
+
+    jobs:
+      - deployment: DeployToAKS
+        displayName: "Deploy Backend and Frontend"
+        environment: "Development"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                # Login to Azure
+                - task: AzureCLI@2
+                  displayName: "Login to Azure"
+                  inputs:
+                    azureSubscription: "Azure-ServiceConnection"
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az account show
+
+                # Get AKS Credentials
+                - task: AzureCLI@2
+                  displayName: "Get AKS Credentials"
+                  inputs:
+                    azureSubscription: "Azure-ServiceConnection"
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az aks get-credentials \
+                        --resource-group $(resourceGroupName) \
+                        --name $(aksClusterName) \
+                        --overwrite-existing
+
+                # Install Secrets Store CSI Driver
+                - script: |
+                    helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+                    helm repo update
+                    helm upgrade --install csi-driver \
+                      secrets-store-csi-driver/secrets-store-csi-driver \
+                      --namespace kube-system
+                  displayName: "Install CSI Driver"
+
+                # Install Azure Provider
+                - script: |
+                    helm repo add csi-secrets-store-provider-azure \
+                      https://azure.github.io/secrets-store-csi-driver-provider-azure/charts
+                    helm repo update
+                    helm upgrade --install azure-provider \
+                      csi-secrets-store-provider-azure/csi-secrets-store-provider-azure \
+                      --namespace kube-system
+                  displayName: "Install Azure Provider"
+
+                # Deploy Backend
+                - script: |
+                    helm upgrade --install backend \
+                      $(backendHelmChart) \
+                      --namespace $(kubernetesNamespace) \
+                      --create-namespace \
+                      --set image.repository=$(ACR_NAME).azurecr.io/$(backendImageName) \
+                      --set image.tag=$(imageTag)
+                  displayName: "Deploy Backend"
+
+                # Deploy Frontend
+                - script: |
+                    helm upgrade --install frontend \
+                      $(frontendHelmChart) \
+                      --namespace $(kubernetesNamespace) \
+                      --set image.repository=$(ACR_NAME).azurecr.io/$(frontendImageName) \
+                      --set image.tag=$(imageTag)
+                  displayName: "Deploy Frontend"
+
+  # ==========================================================
+  # Stage 9 - Verification
+  # ==========================================================
+
+  - stage: Verify
+    displayName: "Verify AKS Deployment"
+    dependsOn: Deploy
+    pool:
+      name: nvssc-selfhost
+
+    jobs:
+      - job: VerifyDeployment
+        displayName: "Verify Kubernetes Resources"
+        steps:
+          - checkout: self
+
+          - task: AzureCLI@2
+            displayName: "Get AKS Credentials"
+            inputs:
+              azureSubscription: "Azure-ServiceConnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(resourceGroupName) \
+                  --name $(aksClusterName) \
+                  --overwrite-existing
+
+          - script: |
+              kubectl get nodes
+            displayName: "Verify Nodes"
+
+          - script: |
+              kubectl get pods -n $(kubernetesNamespace)
+            displayName: "Verify Pods"
+
+          - script: |
+              kubectl get svc -n $(kubernetesNamespace)
+            displayName: "Verify Services"
+
+          - script: |
+              kubectl get ingress -n $(kubernetesNamespace)
+            displayName: "Verify Ingress"
+
+          - script: |
+              kubectl rollout status deployment/backend -n $(kubernetesNamespace)
+            displayName: "Verify Backend Rollout"
+
+          - script: |
+              kubectl rollout status deployment/frontend -n $(kubernetesNamespace)
+            displayName: "Verify Frontend Rollout"
