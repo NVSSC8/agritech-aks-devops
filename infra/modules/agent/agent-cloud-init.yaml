@@ -87,7 +87,7 @@ runcmd:
   ####################################################################
   # Configure Azure DevOps Agent
   ####################################################################
- - |
+  - |
     cd /home/azagent/agent
 
     sudo -u azagent ./config.sh \
@@ -102,4 +102,4 @@ runcmd:
       --work _work
 
     ./svc.sh install azagent
-    ./svc.sh start
+    ./svc.sh start  
