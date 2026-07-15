@@ -35,7 +35,7 @@ stages:
     displayName: "Provision Azure Infrastructure"
 
     pool:
-      name: ubuntu-latest
+      name: 'ubuntu-latest'
 
     jobs:
 
