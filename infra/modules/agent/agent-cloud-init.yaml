@@ -37,7 +37,7 @@ runcmd:
   ####################################################################
   # Terraform
   ####################################################################
-  - wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  - wget -qO- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
   - echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
   - apt-get update
   - apt-get install -y terraform
@@ -61,10 +61,10 @@ runcmd:
   ####################################################################
   # Trivy
   ####################################################################
-  - wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.64.1_Linux-64bit.deb
-  - dpkg -i trivy_0.64.1_Linux-64bit.deb
-
-
+  - |
+      TRIVY_VERSION=$(curl -fsSL https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep '"tag_name"' | cut -d '"' -f4 | sed 's/^v//')
+      wget -O trivy.deb "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+      dpkg -i trivy.deb
 
   ####################################################################
   # Azure DevOps Self-Hosted Agent
@@ -80,26 +80,33 @@ runcmd:
   ####################################################################
   # Download Azure DevOps Agent
   ####################################################################
-  - cd /home/azagent/agent
-  - sudo -u azagent wget https://vstsagentpackage.azureedge.net/agent/4.261.0/vsts-agent-linux-x64-4.261.0.tar.gz
-  - sudo -u azagent tar zxvf vsts-agent-linux-x64-4.261.0.tar.gz
+  - |
+      sudo -u azagent bash -c '
+        cd /home/azagent/agent &&
+        wget https://vstsagentpackage.azureedge.net/agent/4.261.0/vsts-agent-linux-x64-4.261.0.tar.gz &&
+        tar zxvf vsts-agent-linux-x64-4.261.0.tar.gz
+      '
 
   ####################################################################
   # Configure Azure DevOps Agent
   ####################################################################
   - |
-    cd /home/azagent/agent
+      sudo -u azagent bash -c '
+        cd /home/azagent/agent &&
+        ./config.sh \
+          --unattended \
+          --url "${azure_devops_url}" \
+          --auth pat \
+          --token "${pat_token}" \
+          --pool "${agent_pool}" \
+          --agent "${agent_name}" \
+          --acceptTeeEula \
+          --replace \
+          --work _work
+      '
 
-    sudo -u azagent ./config.sh \
-      --unattended \
-      --url "${azure_devops_url}" \
-      --auth pat \
-      --token "${pat_token}" \
-      --pool "${agent_pool}" \
-      --agent "${agent_name}" \
-      --acceptTeeEula \
-      --replace \
-      --work _work
-
-    ./svc.sh install azagent
-    ./svc.sh start  
+  ####################################################################
+  # Install and Start Agent Service
+  ####################################################################
+  - cd /home/azagent/agent && ./svc.sh install azagent
+  - cd /home/azagent/agent && ./svc.sh start
