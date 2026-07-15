@@ -35,7 +35,7 @@ stages:
     displayName: "Provision Azure Infrastructure"
 
     pool:
-      vmImage: ubuntu-latest
+      vmImage: nvssc-selfhost
 
     jobs:
 
