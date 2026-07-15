@@ -84,11 +84,11 @@ runcmd:
   # Download Azure DevOps Agent
   ####################################################################
   - |
-      sudo -u azagent bash -c '
-        cd /home/azagent/agent &&
-        wget https://vstsagentpackage.azureedge.net/agent/4.261.0/vsts-agent-linux-x64-4.261.0.tar.gz &&
-        tar zxvf vsts-agent-linux-x64-4.261.0.tar.gz
-      '
+    sudo -u azagent bash -c '
+      cd /home/azagent/agent &&
+      wget https://download.agent.dev.azure.com/agent/5.275.0/pipelines-agent-linux-x64-5.275.0.tar.gz &&
+      tar -xzf pipelines-agent-linux-x64-5.275.0.tar.gz
+    '
 
   ####################################################################
   # Configure Azure DevOps Agent
