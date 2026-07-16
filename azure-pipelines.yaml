@@ -113,14 +113,16 @@ stages:
               organization: "nvssc8"
               scannerMode: "Other"
 
-          - task: Maven@4
+          - script: |
+              export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+              export PATH=$JAVA_HOME/bin:$PATH
+
+              java -version
+              mvn -version
+
+              cd backend
+              mvn clean verify sonar:sonar
             displayName: "Run Sonar Scan"
-            inputs:
-              mavenPomFile: backend/pom.xml
-              goals: clean verify sonar:sonar
-              javaHomeOption: JDKVersion
-              jdkVersionOption: "1.17"
-              mavenVersionOption: Default
 
           - task: SonarCloudPublish@4
             displayName: "Publish Quality Gate"
