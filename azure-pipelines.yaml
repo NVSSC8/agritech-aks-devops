@@ -51,17 +51,17 @@ stages:
               mvn -version
             displayName: "Verify Java and Maven"
 
-          - task: Maven@4
-            displayName: "Build Backend"
-            inputs:
-              mavenPomFile: "backend/pom.xml"
-              goals: "clean package -DskipTests"
-              publishJUnitResults: true
-              testResultsFiles: "**/surefire-reports/TEST-*.xml"
-              javaHomeOption: "JDKVersion"
-              jdkVersionOption: "1.17"
-              mavenVersionOption: "Default"
+          - script: |
+              export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+              export PATH=$JAVA_HOME/bin:$PATH
 
+              echo "JAVA_HOME=$JAVA_HOME"
+              java -version
+              mvn -version
+
+              cd backend
+              mvn clean package -DskipTests
+            displayName: "Build Backend" 
   # ==========================================================
   # Stage 3 - Test
   # ==========================================================
