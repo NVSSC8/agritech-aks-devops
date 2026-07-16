@@ -348,8 +348,8 @@ stages:
               scriptLocation: inlineScript
               inlineScript: |
                 az aks get-credentials \
-                  --resource-group $(resourceGroupName) \
-                  --name $(aksClusterName) \
+                  --resource-group $(RESOURCE_GROUP) \
+                  --name $(AKS_NAME) \
                   --overwrite-existing
 
           - script: |
