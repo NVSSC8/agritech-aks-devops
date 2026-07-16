@@ -298,9 +298,10 @@ stages:
                       https://azure.github.io/secrets-store-csi-driver-provider-azure/charts
 
                     helm repo update
+                
                     helm upgrade --install azure-provider \
                       csi-secrets-store-provider-azure/csi-secrets-store-provider-azure \
-                      --namespace kube-system
+                      --namespace kube-system \
                       --set secrets-store-csi-driver.install=false
                   displayName: "Install Azure Provider"
 
