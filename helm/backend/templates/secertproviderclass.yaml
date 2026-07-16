@@ -11,7 +11,7 @@ spec:
 
   parameters:
     usePodIdentity: "false"
-    useVMManagedIdentity: "false"
+    useVMManagedIdentity: "true"
 
     clientID: {{ .Values.keyVault.clientId | quote }}
 

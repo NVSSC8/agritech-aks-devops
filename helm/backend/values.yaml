@@ -98,9 +98,11 @@ config:
 
 keyVault:
 
-  clientId: "<AKS Managed Identity Client ID>"
+  clientId: e2cb4a78-92ee-4a5a-914c-96984a2e623c
 
-  tenantId: "<Your Azure Tenant ID>"
+
+  tenantId: 3efa21b7-40cf-43f0-84c0-1116b9844336
+
 
   name:  "agritech-kv"
 

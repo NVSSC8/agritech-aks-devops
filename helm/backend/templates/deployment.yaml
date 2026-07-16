@@ -33,10 +33,11 @@ spec:
             - configMapRef:
                 name: {{ include "backend.fullname" . }}
 
-          volumeMounts:
-            - name: secrets-store
-              mountPath: "/mnt/secrets-store"
-              readOnly: true
+          # Temporary: Disable Key Vault CSI Mount
+          # volumeMounts:
+          #   - name: secrets-store
+          #     mountPath: "/mnt/secrets-store"
+          #     readOnly: true
 
           resources:
             requests:
@@ -63,11 +64,12 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 10
 
-      volumes:
-        - name: secrets-store
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-
-            volumeAttributes:
-             secretProviderClass: {{ include "backend.fullname" . }}-spc
+      # Temporary: Disable Key Vault CSI Volume
+      # volumes:
+      #   - name: secrets-store
+      #     csi:
+      #       driver: secrets-store.csi.k8s.io
+      #       readOnly: true
+      #
+      #       volumeAttributes:
+      #         secretProviderClass: {{ include "backend.fullname" . }}-spc
