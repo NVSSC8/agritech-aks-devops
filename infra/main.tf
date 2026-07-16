@@ -112,3 +112,18 @@ module "aks" {
   subnet_id    = module.vnet.vm_subnet_id
   workspace_id = module.log_analytics.workspace_id
 }
+
+
+module "acr_role_assignment" {
+
+  source = "./modules/acr_role_assignment"
+
+  acr_id = module.acr.id
+
+  kubelet_identity = module.aks.kubelet_identity
+
+  depends_on = [
+    module.acr,
+    module.aks
+  ]
+}

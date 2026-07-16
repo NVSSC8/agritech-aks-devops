@@ -7,7 +7,11 @@ packages:
   - curl
   - wget
   - unzip
+  - zip
   - git
+  - jq
+  - python3
+  - python3-pip
   - apt-transport-https
   - ca-certificates
   - software-properties-common
@@ -15,6 +19,13 @@ packages:
   - lsb-release
 
 runcmd:
+
+  ####################################################################
+  # Create Azure DevOps Agent User
+  ####################################################################
+  - useradd -m -s /bin/bash azagent || true
+  - mkdir -p /home/azagent/agent
+  - chown -R azagent:azagent /home/azagent
 
   ####################################################################
   # Java 17
@@ -33,6 +44,7 @@ runcmd:
   - curl -fsSL https://get.docker.com | sh
   - systemctl enable docker
   - systemctl start docker
+  - usermod -aG docker azagent
 
   ####################################################################
   # Terraform
@@ -41,54 +53,49 @@ runcmd:
   - echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
   - apt-get update
   - apt-get install -y terraform
+  - terraform version
 
   ####################################################################
   # Azure CLI
   ####################################################################
   - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+  - az version
 
   ####################################################################
   # kubectl
   ####################################################################
   - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
   - install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+  - kubectl version --client
 
   ####################################################################
   # Helm
   ####################################################################
   - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  - helm version
 
   ####################################################################
   # Trivy
   ####################################################################
   - |
-     TRIVY_VERSION=$(curl -fsSL https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep '"tag_name"' | cut -d '"' -f4 | sed 's/^v//')
+      TRIVY_VERSION=$(curl -fsSL https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep '"tag_name"' | cut -d '"' -f4 | sed 's/^v//')
 
-     wget -O trivy.deb \
-     "https://github.com/aquasecurity/trivy/releases/download/v$${TRIVY_VERSION}/trivy_$${TRIVY_VERSION}_Linux-64bit.deb"
+      wget -O trivy.deb \
+      "https://github.com/aquasecurity/trivy/releases/download/v$${TRIVY_VERSION}/trivy_$${TRIVY_VERSION}_Linux-64bit.deb"
 
-     dpkg -i trivy.deb
+      dpkg -i trivy.deb
 
-  ####################################################################
-  # Azure DevOps Self-Hosted Agent
-  ####################################################################
-
-  ####################################################################
-  # Create Azure DevOps Agent User
-  ####################################################################
-  - useradd -m -s /bin/bash azagent || true
-  - mkdir -p /home/azagent/agent
-  - chown -R azagent:azagent /home/azagent
+      trivy --version
 
   ####################################################################
   # Download Azure DevOps Agent
   ####################################################################
   - |
-    sudo -u azagent bash -c '
-      cd /home/azagent/agent &&
-      wget https://download.agent.dev.azure.com/agent/5.275.0/pipelines-agent-linux-x64-5.275.0.tar.gz &&
-      tar -xzf pipelines-agent-linux-x64-5.275.0.tar.gz
-    '
+      sudo -u azagent bash -c '
+        cd /home/azagent/agent &&
+        wget https://download.agent.dev.azure.com/agent/5.275.0/pipelines-agent-linux-x64-5.275.0.tar.gz &&
+        tar -xzf pipelines-agent-linux-x64-5.275.0.tar.gz
+      '
 
   ####################################################################
   # Configure Azure DevOps Agent
@@ -109,12 +116,31 @@ runcmd:
       '
 
   ####################################################################
-  # Install and Start Agent Service
+  # Install Agent Service
   ####################################################################
   - |
-    cd /home/azagent/agent
-    ./svc.sh install azagent
+      cd /home/azagent/agent
+      ./svc.sh install azagent
 
+  ####################################################################
+  # Reload Systemd
+  ####################################################################
+  - systemctl daemon-reload
+
+  ####################################################################
+  # Start Agent Service
+  ####################################################################
   - |
-    cd /home/azagent/agent
-    ./svc.sh start
+      cd /home/azagent/agent
+      ./svc.sh start
+
+  ####################################################################
+  # Restart Agent Service
+  ####################################################################
+  - systemctl restart $(systemctl list-units --type=service --no-legend | awk '/vsts.agent/ {print $1}' | head -n1) || true
+
+  ####################################################################
+  # Verify Agent Environment
+  ####################################################################
+  - sudo -u azagent docker version
+  - sudo -u azagent docker ps

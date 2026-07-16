@@ -369,9 +369,9 @@ stages:
             displayName: "Verify Ingress"
 
           - script: |
-              kubectl rollout status deployment/backend -n $(kubernetesNamespace)
+              kubectl rollout status deployment/backend-backend -n $(kubernetesNamespace)
             displayName: "Verify Backend Rollout"
 
           - script: |
-              kubectl rollout status deployment/frontend -n $(kubernetesNamespace)
+              kubectl rollout status deployment/frontend-frontend -n $(kubernetesNamespace)
             displayName: "Verify Frontend Rollout"
