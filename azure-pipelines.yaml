@@ -296,10 +296,12 @@ stages:
                 - script: |
                     helm repo add csi-secrets-store-provider-azure \
                       https://azure.github.io/secrets-store-csi-driver-provider-azure/charts
+
                     helm repo update
                     helm upgrade --install azure-provider \
                       csi-secrets-store-provider-azure/csi-secrets-store-provider-azure \
                       --namespace kube-system
+                      --set secrets-store-csi-driver.install=false
                   displayName: "Install Azure Provider"
 
                 # Deploy Backend
