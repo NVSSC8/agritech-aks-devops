@@ -27,119 +27,7 @@ variables:
 
 stages:
 
-  # ==========================================================
-  # Stage 1 - Infrastructure
-  # ==========================================================
 
-  - stage: Infrastructure
-    displayName: "Provision Azure Infrastructure"
-
-    pool:
-      name: 'ubuntu-latest'
-
-    jobs:
-
-      - job: Terraform
-        displayName: "Terraform Deployment"
-
-        steps:
-
-          - checkout: self
-
-          - task: TerraformInstaller@1
-            displayName: "Install Terraform"
-            inputs:
-              terraformVersion: "latest"
-
-          # Terraform Init
-          - task: AzureCLI@2
-            displayName: "Terraform Init"
-            inputs:
-              azureSubscription: "Azure-ServiceConnection"
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                cd $(terraformWorkingDirectory)
-                terraform init
-            env:
-              TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
-              TF_VAR_tenant_id: $(TENANT_ID)
-              TF_VAR_client_id: $(CLIENT_ID)
-              TF_VAR_client_secret: $(CLIENT_SECRET)
-              TF_VAR_ssh_public_key: $(SSH_PUBLIC_KEY)
-              TF_VAR_aks_name: $(AKS_NAME)
-              TF_VAR_node_count: $(NODE_COUNT)
-              TF_VAR_acr_name: $(ACR_NAME)
-              TF_VAR_mysql_admin_username: $(MYSQL_ADMIN_USERNAME)
-              TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
-              TF_VAR_key_vault_name: $(KEY_VAULT_NAME)
-              TF_VAR_azure_devops_url: $(AZURE_DEVOPS_URL)
-              TF_VAR_agent_pool: $(AGENT_POOL)
-              TF_VAR_pat_token: $(PAT_TOKEN)
-
-          # Terraform Format Check
-          - script: |
-              cd $(terraformWorkingDirectory)
-              terraform fmt -check
-            displayName: "Terraform Format Check"
-
-          # Terraform Validate
-          - script: |
-              cd $(terraformWorkingDirectory)
-              terraform validate
-            displayName: "Terraform Validate"
-
-          # Terraform Plan
-          - task: AzureCLI@2
-            displayName: "Terraform Plan"
-            inputs:
-              azureSubscription: "Azure-ServiceConnection"
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                cd $(terraformWorkingDirectory)
-                terraform plan -out=tfplan
-            env:
-              TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
-              TF_VAR_tenant_id: $(TENANT_ID)
-              TF_VAR_client_id: $(CLIENT_ID)
-              TF_VAR_client_secret: $(CLIENT_SECRET)
-              TF_VAR_ssh_public_key: $(SSH_PUBLIC_KEY)
-              TF_VAR_aks_name: $(AKS_NAME)
-              TF_VAR_node_count: $(NODE_COUNT)
-              TF_VAR_acr_name: $(ACR_NAME)
-              TF_VAR_mysql_admin_username: $(MYSQL_ADMIN_USERNAME)
-              TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
-              TF_VAR_key_vault_name: $(KEY_VAULT_NAME)
-              TF_VAR_azure_devops_url: $(AZURE_DEVOPS_URL)
-              TF_VAR_agent_pool: $(AGENT_POOL)
-              TF_VAR_pat_token: $(PAT_TOKEN)
-
-          # Terraform Apply
-          - task: AzureCLI@2
-            displayName: "Terraform Apply"
-            inputs:
-              azureSubscription: "Azure-ServiceConnection"
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                cd $(terraformWorkingDirectory)
-                terraform apply -auto-approve tfplan
-            env:
-              TF_VAR_subscription_id: $(SUBSCRIPTION_ID)
-              TF_VAR_tenant_id: $(TENANT_ID)
-              TF_VAR_client_id: $(CLIENT_ID)
-              TF_VAR_client_secret: $(CLIENT_SECRET)
-              TF_VAR_ssh_public_key: $(SSH_PUBLIC_KEY)
-              TF_VAR_aks_name: $(AKS_NAME)
-              TF_VAR_node_count: $(NODE_COUNT)
-              TF_VAR_acr_name: $(ACR_NAME)
-              TF_VAR_mysql_admin_username: $(MYSQL_ADMIN_USERNAME)
-              TF_VAR_mysql_admin_password: $(MYSQL_ADMIN_PASSWORD)
-              TF_VAR_key_vault_name: $(KEY_VAULT_NAME)
-              TF_VAR_azure_devops_url: $(AZURE_DEVOPS_URL)
-              TF_VAR_agent_pool: $(AGENT_POOL)
-              TF_VAR_pat_token: $(PAT_TOKEN)
 
   # ==========================================================
   # Stage 2 - Build
@@ -147,7 +35,7 @@ stages:
 
   - stage: Build
     displayName: "Build Applications"
-    dependsOn: Infrastructure
+    dependsOn: []
     pool:
       name: nvssc-selfhost
 

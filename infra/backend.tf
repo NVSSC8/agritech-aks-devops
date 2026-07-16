@@ -1,7 +1,7 @@
 terraform {
   backend "azurerm" {
-    resource_group_name  = "agritech-rg"
-    storage_account_name = "agritechdevappxi9il"
+    resource_group_name  = "terraform-backend-rg"
+    storage_account_name = "tfstate88"
     container_name       = "tfstate"
     key                  = "terraform.tfstate"
   }
