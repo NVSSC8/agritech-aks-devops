@@ -96,13 +96,13 @@ config:
   DB_NAME: agritechdb
 
 
-  keyVault:
+keyVault:
 
-  clientId: ""
+  clientId: "<AKS Managed Identity Client ID>"
 
-  tenantId: ""
+  tenantId: "<Your Azure Tenant ID>"
 
-  name: ""
+  name:  "agritech-kv"
 
   secrets:
 
