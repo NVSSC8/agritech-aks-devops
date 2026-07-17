@@ -82,6 +82,11 @@ stages:
               cd backend
               mvn test
             displayName: "Run Maven Tests"
+            env:
+              SPRING_DATASOURCE_URL: $(SPRING_DATASOURCE_URL)
+              SPRING_DATASOURCE_USERNAME: $(SPRING_DATASOURCE_USERNAME)
+              SPRING_DATASOURCE_PASSWORD: $(SPRING_DATASOURCE_PASSWORD)
+
 
           - task: PublishTestResults@2
             displayName: "Publish Test Results"
