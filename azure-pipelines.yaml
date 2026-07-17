@@ -298,7 +298,7 @@ stages:
                         --start-ip-address 0.0.0.0 \
                         --end-ip-address 0.0.0.0 \
                         --output none 2>/dev/null || echo "Firewall rule already exists"
-                        
+
                 # Get AKS Credentials
                 - task: AzureCLI@2
                   displayName: "Get AKS Credentials"
@@ -420,3 +420,46 @@ stages:
           - script: |
               kubectl rollout status deployment/frontend-frontend -n $(kubernetesNamespace)
             displayName: "Verify Frontend Rollout"
+
+
+          # Get the application URL and test accessibility
+
+          - script: |
+              echo "========================================="
+              echo "  Getting Application URLs..."
+              echo "========================================="
+              
+              # Get Ingress IP/Hostname (if using ingress)
+              INGRESS_IP=$(kubectl get ingress -n $(kubernetesNamespace) -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+              INGRESS_HOST=$(kubectl get ingress -n $(kubernetesNamespace) -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+              
+              if [ -n "$INGRESS_IP" ]; then
+                echo "🔗 Backend API URL: http://$INGRESS_IP/api/"
+                echo "🔗 Frontend URL:    http://$INGRESS_IP"
+              elif [ -n "$INGRESS_HOST" ]; then
+                echo "🔗 Backend API URL: http://$INGRESS_HOST/api/"
+                echo "🔗 Frontend URL:    http://$INGRESS_HOST"
+              else
+                # Fallback to service external IP
+                FRONTEND_IP=$(kubectl get svc frontend-frontend -n $(kubernetesNamespace) -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+                if [ -n "$FRONTEND_IP" ]; then
+                  echo "🔗 Frontend URL: http://$FRONTEND_IP"
+                  echo "🔗 Backend API URL: http://$FRONTEND_IP/api/"
+                else
+                  echo "⚠️  No external endpoint found. Check your Ingress or LoadBalancer configuration."
+                fi
+              fi
+            displayName: "Get Application URLs"
+
+          # Test backend API health endpoint
+          - script: |
+              echo "Testing Backend API health..."
+              INGRESS_IP=$(kubectl get ingress -n $(kubernetesNamespace) -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+              
+              if [ -n "$INGRESS_IP" ]; then
+                curl -s -o /dev/null -w "Backend Health Check HTTP Status: %{http_code}\n" http://$INGRESS_IP/api/actuator/health || echo "❌ Backend not accessible yet"
+              else
+                echo "No ingress found. Testing via service..."
+                kubectl run test-pod --image=curlimages/curl --rm --restart=Never -- curl -s http://backend-backend:80/actuator/health 2>/dev/null || echo "❌ Backend not accessible"
+              fi
+            displayName: "Test Backend Health"  
