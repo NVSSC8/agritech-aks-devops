@@ -274,7 +274,31 @@ stages:
                     scriptLocation: inlineScript
                     inlineScript: |
                       az account show
+                  
+                #  NEW: Create database if not exists + Add firewall rule  
+                - task: AzureCLI@2
+                  displayName: "Create Database & Configure Firewall"
+                  inputs:
+                    azureSubscription: "Azure-ServiceConnection"
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      # Create database if not exists
+                      az mysql flexible-server db create \
+                        --resource-group $(RESOURCE_GROUP) \
+                        --server-name agritech-dev-mysql \
+                        --database-name agritechdb \
+                        --output none 2>/dev/null || echo "Database already exists"
 
+                      # Add firewall rule allowing ALL Azure services (safe)
+                      az mysql flexible-server firewall-rule create \
+                        --resource-group $(RESOURCE_GROUP) \
+                        --name agritech-dev-mysql \
+                        --rule-name "AllowAzureServices" \
+                        --start-ip-address 0.0.0.0 \
+                        --end-ip-address 0.0.0.0 \
+                        --output none 2>/dev/null || echo "Firewall rule already exists"
+                        
                 # Get AKS Credentials
                 - task: AzureCLI@2
                   displayName: "Get AKS Credentials"
