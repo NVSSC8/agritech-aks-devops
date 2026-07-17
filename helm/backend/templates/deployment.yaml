@@ -33,6 +33,17 @@ spec:
             - configMapRef:
                 name: {{ include "backend.fullname" . }}
 
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: {{ .Values.springDatasource.url | quote }}
+
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.springDatasource.username | quote }}
+
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: {{ .Values.springDatasource.password | quote }}  
+              
+                 
           # Temporary: Disable Key Vault CSI Mount
           # volumeMounts:
           #   - name: secrets-store

@@ -278,10 +278,23 @@ stages:
                     scriptType: bash
                     scriptLocation: inlineScript
                     inlineScript: |
+                      set -e
+
+                      echo "Getting AKS credentials..."
+
                       az aks get-credentials \
                         --resource-group $(RESOURCE_GROUP) \
                         --name $(AKS_NAME) \
                         --overwrite-existing
+
+                      echo "Current Context:"
+                      kubectl config current-context
+
+                      echo "AKS Nodes:"
+                      kubectl get nodes
+
+                      echo "Namespaces:"
+                      kubectl get ns
 
                 # Install Secrets Store CSI Driver
                 - script: |
@@ -312,7 +325,10 @@ stages:
                       --namespace $(kubernetesNamespace) \
                       --create-namespace \
                       --set image.repository=$(ACR_NAME).azurecr.io/$(backendImageName) \
-                      --set image.tag=$(imageTag)
+                      --set image.tag=$(imageTag) \
+                      --set springDatasource.url="$(SPRING_DATASOURCE_URL)" \
+                      --set springDatasource.username="$(SPRING_DATASOURCE_USERNAME)" \
+                      --set springDatasource.password="$(SPRING_DATASOURCE_PASSWORD)"
                   displayName: "Deploy Backend"
 
                 # Deploy Frontend

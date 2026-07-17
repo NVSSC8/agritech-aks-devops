@@ -95,6 +95,14 @@ config:
 
   DB_NAME: agritechdb
 
+springDatasource:
+
+  url: ""
+
+  username: ""
+
+  password: ""
+
 
 keyVault:
 
