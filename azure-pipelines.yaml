@@ -393,7 +393,7 @@ stages:
                                 name: frontend-frontend
                                 port:
                                   number: 80
-                      - host: api.oktevanvs.buzz
+                      - host: api.oktevanvs,
                         http:
                           paths:
                           - path: /
