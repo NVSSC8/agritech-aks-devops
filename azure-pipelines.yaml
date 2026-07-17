@@ -369,6 +369,43 @@ stages:
                       --set image.tag=$(imageTag)
                   displayName: "Deploy Frontend"
 
+
+                # Create Ingress
+                - script: |
+                    kubectl apply -f - <<EOF
+                    apiVersion: networking.k8s.io/v1
+                    kind: Ingress
+                    metadata:
+                      name: agritech-ingress
+                      namespace: $(kubernetesNamespace)
+                      annotations:
+                        nginx.ingress.kubernetes.io/rewrite-target: /
+                    spec:
+                      ingressClassName: nginx
+                      rules:
+                      - host: oktevanvs.buzz
+                        http:
+                          paths:
+                          - path: /
+                            pathType: Prefix
+                            backend:
+                              service:
+                                name: frontend-frontend
+                                port:
+                                  number: 80
+                      - host: api.oktevanvs.buzz
+                        http:
+                          paths:
+                          - path: /
+                            pathType: Prefix
+                            backend:
+                              service:
+                                name: backend-backend
+                                port:
+                                  number: 80
+                    EOF
+                  displayName: "Create Ingress" 
+
   # ==========================================================
   # Stage 9 - Verification
   # ==========================================================
