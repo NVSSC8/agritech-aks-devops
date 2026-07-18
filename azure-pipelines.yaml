@@ -383,7 +383,7 @@ stages:
                     spec:
                       ingressClassName: nginx
                       rules:
-                      - host: oktevanvs.buzz
+                      - host: "oktevanvs.buzz"
                         http:
                           paths:
                           - path: /
@@ -393,7 +393,7 @@ stages:
                                 name: frontend-frontend
                                 port:
                                   number: 80
-                      - host: api.oktevanvs,
+                      - host: "api.oktevanvs.buzz"
                         http:
                           paths:
                           - path: /
