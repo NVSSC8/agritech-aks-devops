@@ -358,7 +358,7 @@ stages:
                       --set springDatasource.url="$(SPRING_DATASOURCE_URL)" \
                       --set springDatasource.username="$(SPRING_DATASOURCE_USERNAME)" \
                       --set springDatasource.password="$(SPRING_DATASOURCE_PASSWORD)" \
-                      **--set ingress.enabled=false**
+                      --set ingress.enabled=false
                   displayName: "Deploy Backend"
 
                 # Deploy Frontend
@@ -368,7 +368,7 @@ stages:
                       --namespace $(kubernetesNamespace) \
                       --set image.repository=$(ACR_NAME).azurecr.io/$(frontendImageName) \
                       --set image.tag=$(imageTag) \
-                      **--set ingress.enabled=false**
+                      --set ingress.enabled=false
                   displayName: "Deploy Frontend"
                   
                 # Install NGINX Ingress Controller
