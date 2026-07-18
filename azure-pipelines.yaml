@@ -357,7 +357,8 @@ stages:
                       --set image.tag=$(imageTag) \
                       --set springDatasource.url="$(SPRING_DATASOURCE_URL)" \
                       --set springDatasource.username="$(SPRING_DATASOURCE_USERNAME)" \
-                      --set springDatasource.password="$(SPRING_DATASOURCE_PASSWORD)"
+                      --set springDatasource.password="$(SPRING_DATASOURCE_PASSWORD)" \
+                      **--set ingress.enabled=false**
                   displayName: "Deploy Backend"
 
                 # Deploy Frontend
@@ -366,7 +367,8 @@ stages:
                       $(frontendHelmChart) \
                       --namespace $(kubernetesNamespace) \
                       --set image.repository=$(ACR_NAME).azurecr.io/$(frontendImageName) \
-                      --set image.tag=$(imageTag)
+                      --set image.tag=$(imageTag) \
+                      **--set ingress.enabled=false**
                   displayName: "Deploy Frontend"
                   
                 # Install NGINX Ingress Controller
@@ -378,7 +380,7 @@ stages:
                       --timeout=120s
                   displayName: "Install NGINX Ingress Controller"
 
-                # Create Ingress with default backend (no host required)
+                # Create Ingress
                 - script: |
                     kubectl apply -f - <<EOF
                     apiVersion: networking.k8s.io/v1
@@ -388,11 +390,6 @@ stages:
                       namespace: $(kubernetesNamespace)
                     spec:
                       ingressClassName: nginx
-                      defaultBackend:
-                        service:
-                          name: frontend-frontend
-                          port:
-                            number: 80
                       rules:
                       - host: "oktevanvs.buzz"
                         http:
@@ -416,6 +413,7 @@ stages:
                                   number: 80
                     EOF
                   displayName: "Create Ingress"
+                
 
   # ==========================================================
   # Stage 9 - Verification
