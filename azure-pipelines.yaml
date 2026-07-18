@@ -418,6 +418,29 @@ stages:
                                   number: 80
                     EOF
                   displayName: "Create Ingress"
+
+                # Create IP-specific Ingress
+                - script: |
+                    cat << 'EOF' | kubectl apply -f -
+                    apiVersion: networking.k8s.io/v1
+                    kind: Ingress
+                    metadata:
+                      name: agritech-ip-ingress
+                      namespace: $(kubernetesNamespace)
+                    spec:
+                      ingressClassName: nginx
+                      rules:
+                      - http:
+                          paths:
+                          - path: /
+                            pathType: Prefix
+                            backend:
+                              service:
+                                name: frontend-frontend
+                                port:
+                                  number: 80
+                    EOF
+                  displayName: "Create IP Ingress"    
                 
 
   # ==========================================================
