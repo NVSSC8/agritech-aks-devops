@@ -390,6 +390,11 @@ stages:
                       namespace: $(kubernetesNamespace)
                     spec:
                       ingressClassName: nginx
+                      defaultBackend:
+                        service:
+                          name: frontend-frontend
+                          port:
+                            number: 80
                       rules:
                       - host: "oktevanvs.buzz"
                         http:
