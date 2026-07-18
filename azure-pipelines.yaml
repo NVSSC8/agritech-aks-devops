@@ -369,7 +369,16 @@ stages:
                       --set image.tag=$(imageTag)
                   displayName: "Deploy Frontend"
                   
-                # Create Ingress
+                # Install NGINX Ingress Controller
+                - script: |
+                    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
+                    kubectl wait --namespace ingress-nginx \
+                      --for=condition=ready pod \
+                      --selector=app.kubernetes.io/component=controller \
+                      --timeout=120s
+                  displayName: "Install NGINX Ingress Controller"
+
+                # Create Ingress with default backend (no host required)
                 - script: |
                     kubectl apply -f - <<EOF
                     apiVersion: networking.k8s.io/v1
@@ -377,10 +386,13 @@ stages:
                     metadata:
                       name: agritech-ingress
                       namespace: $(kubernetesNamespace)
-                      annotations:
-                        nginx.ingress.kubernetes.io/rewrite-target: /
                     spec:
                       ingressClassName: nginx
+                      defaultBackend:
+                        service:
+                          name: frontend-frontend
+                          port:
+                            number: 80
                       rules:
                       - host: "oktevanvs.buzz"
                         http:
@@ -403,7 +415,7 @@ stages:
                                 port:
                                   number: 80
                     EOF
-                  displayName: "Create Ingress" 
+                  displayName: "Create Ingress"
 
   # ==========================================================
   # Stage 9 - Verification
@@ -459,43 +471,29 @@ stages:
 
 
           # Get the application URL and test accessibility
-
           - script: |
               echo "========================================="
-              echo "  Getting Application URLs..."
+              echo "  Application URLs"
               echo "========================================="
               
-              # Get Ingress IP/Hostname (if using ingress)
-              INGRESS_IP=$(kubectl get ingress -n $(kubernetesNamespace) -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null)
-              INGRESS_HOST=$(kubectl get ingress -n $(kubernetesNamespace) -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
-              
-              if [ -n "$INGRESS_IP" ]; then
-                echo "🔗 Backend API URL: http://$INGRESS_IP/api/"
-                echo "🔗 Frontend URL:    http://$INGRESS_IP"
-              elif [ -n "$INGRESS_HOST" ]; then
-                echo "🔗 Backend API URL: http://$INGRESS_HOST/api/"
-                echo "🔗 Frontend URL:    http://$INGRESS_HOST"
-              else
-                # Fallback to service external IP
-                FRONTEND_IP=$(kubectl get svc frontend-frontend -n $(kubernetesNamespace) -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
-                if [ -n "$FRONTEND_IP" ]; then
-                  echo "🔗 Frontend URL: http://$FRONTEND_IP"
-                  echo "🔗 Backend API URL: http://$FRONTEND_IP/api/"
-                else
-                  echo "⚠️  No external endpoint found. Check your Ingress or LoadBalancer configuration."
+              # Get Ingress IP
+              for i in $(seq 1 12); do
+                INGRESS_IP=$(kubectl get ingress agritech-ingress -n $(kubernetesNamespace) -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+                if [ -n "$INGRESS_IP" ]; then
+                  echo "✅ Ingress IP: $INGRESS_IP"
+                  break
                 fi
-              fi
-            displayName: "Get Application URLs"
-
-          # Test backend API health endpoint
-          - script: |
-              echo "Testing Backend API health..."
-              INGRESS_IP=$(kubectl get ingress -n $(kubernetesNamespace) -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+                echo "Waiting for IP... ($i/12)"
+                sleep 10
+              done
               
-              if [ -n "$INGRESS_IP" ]; then
-                curl -s -o /dev/null -w "Backend Health Check HTTP Status: %{http_code}\n" http://$INGRESS_IP/api/actuator/health || echo "❌ Backend not accessible yet"
-              else
-                echo "No ingress found. Testing via service..."
-                kubectl run test-pod --image=curlimages/curl --rm --restart=Never -- curl -s http://backend-backend:80/actuator/health 2>/dev/null || echo "❌ Backend not accessible"
-              fi
-            displayName: "Test Backend Health"  
+              echo ""
+              echo "📌 Access via browser:"
+              echo "   Direct IP (works now): http://$INGRESS_IP"
+              echo "   Frontend:             http://oktevanvs.buzz"
+              echo "   Backend API:          http://api.oktevanvs.buzz/actuator/health"
+              echo ""
+              echo "📌 GoDaddy DNS records to add:"
+              echo "   @   → A → $INGRESS_IP"
+              echo "   api → A → $INGRESS_IP"
+            displayName: "Get Application URLs" 
