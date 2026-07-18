@@ -368,8 +368,7 @@ stages:
                       --set image.repository=$(ACR_NAME).azurecr.io/$(frontendImageName) \
                       --set image.tag=$(imageTag)
                   displayName: "Deploy Frontend"
-
-
+                  
                 # Create Ingress
                 - script: |
                     kubectl apply -f - <<EOF
