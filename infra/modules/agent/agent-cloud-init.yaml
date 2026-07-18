@@ -81,7 +81,7 @@ runcmd:
       TRIVY_VERSION=$(curl -fsSL https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep '"tag_name"' | cut -d '"' -f4 | sed 's/^v//')
 
       wget -O trivy.deb \
-      "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+      "https://github.com/aquasecurity/trivy/releases/download/v$${TRIVY_VERSION}/trivy_$${TRIVY_VERSION}_Linux-64bit.deb"
 
       dpkg -i trivy.deb
 
