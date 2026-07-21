@@ -20,7 +20,7 @@ variables:
     value: agritech
 
   - name: backendHelmChart
-    value: helm/backend
+    value: helm/backend 
 
   - name: frontendHelmChart
     value: helm/frontend
@@ -119,7 +119,9 @@ stages:
               scannerMode: "Other"
 
           - script: |
-              export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+              set -e
+          
+              export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
               export PATH=$JAVA_HOME/bin:$PATH
 
               java -version

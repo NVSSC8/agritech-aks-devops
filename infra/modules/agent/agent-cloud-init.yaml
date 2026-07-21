@@ -26,12 +26,15 @@ runcmd:
   - useradd -m -s /bin/bash azagent || true
   - mkdir -p /home/azagent/agent
   - chown -R azagent:azagent /home/azagent
-
   ####################################################################
-  # Java 17
+  # Java: application can build for Java 17; SonarCloud requires 21+
   ####################################################################
   - apt-get update
-  - apt-get install -y openjdk-17-jdk
+  - apt-get install -y openjdk-17-jdk openjdk-21-jdk
+
+  # Optional verification
+  - /usr/lib/jvm/java-17-openjdk-amd64/bin/java -version
+  - /usr/lib/jvm/java-21-openjdk-amd64/bin/java -version
 
   ####################################################################
   # Maven
